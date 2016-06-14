@@ -28,6 +28,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -212,6 +213,9 @@ public final class CSVParser implements Iterable<CSVRecord>, Closeable {
 
     /** A mapping of column names to column indices */
     private final Map<String, Integer> headerMap;
+    
+    /** A list of column indexes with empty headers, if empty headers are allowed by the format. */
+    private final List<Integer> emptyHdrIndexes;
 
     private final Lexer lexer;
 
@@ -281,6 +285,11 @@ public final class CSVParser implements Iterable<CSVRecord>, Closeable {
 
         this.format = format;
         this.lexer = new Lexer(format, new ExtendedBufferedReader(reader));
+        if (this.format.getAllowMissingColumnNames()) {
+        	emptyHdrIndexes = new ArrayList<>();
+        } else {
+        	emptyHdrIndexes = Collections.emptyList();
+        }
         this.headerMap = this.initializeHeader();
         this.characterOffset = characterOffset;
         this.recordNumber = recordNumber - 1;
@@ -332,6 +341,15 @@ public final class CSVParser implements Iterable<CSVRecord>, Closeable {
      */
     public Map<String, Integer> getHeaderMap() {
         return this.headerMap == null ? null : new LinkedHashMap<>(this.headerMap);
+    }
+    
+    /**
+     * Returns an unmodifiable view on the list of column indexes that have empty headers.
+     * 
+     * @return an unmodifiable view on the list of column indexes that have empty headers. Will never be <code>null</code>.
+     */
+    public List<Integer> getEmptyHdrIndexes() {
+    	return Collections.unmodifiableList(this.emptyHdrIndexes);
     }
 
     /**
@@ -408,6 +426,9 @@ public final class CSVParser implements Iterable<CSVRecord>, Closeable {
                                 "\" in " + Arrays.toString(headerRecord));
                     }
                     hdrMap.put(header, Integer.valueOf(i));
+                    if (emptyHeader && this.format.getAllowMissingColumnNames()) {
+                    	emptyHdrIndexes.add (Integer.valueOf(i));
+                    }
                 }
             }
         }
